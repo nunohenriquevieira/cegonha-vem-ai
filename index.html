@@ -88,7 +88,7 @@ const ASSETS={"stork": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAkAAAABACA
 const META={"stork": {"w": 64, "h": 64, "frames": 9, "box": [2, 15, 62, 56]}, "crow": {"w": 64, "h": 64, "frames": 9, "box": [2, 5, 62, 60]}, "dancer0": {"w": 64, "h": 64, "frames": 9, "box": [14, 1, 51, 63]}, "dancer1": {"w": 64, "h": 64, "frames": 9, "box": [12, 2, 52, 63]}, "dancer2": {"w": 64, "h": 64, "frames": 9, "box": [13, 1, 50, 63]}, "storm": {"w": 64, "h": 64, "frames": 1, "box": [2, 3, 62, 60]}, "angry": {"w": 64, "h": 64, "frames": 1, "box": [2, 10, 62, 53]}, "rain": {"w": 64, "h": 64, "frames": 1, "box": [1, 5, 63, 59]}, "cloud1": {"w": 64, "h": 64, "frames": 1, "box": [1, 10, 63, 54]}, "cloud2": {"w": 64, "h": 64, "frames": 1, "box": [2, 14, 62, 50]}, "bundle": {"w": 64, "h": 64, "frames": 1, "box": [11, 2, 53, 62]}, "baby": {"w": 64, "h": 64, "frames": 1, "box": [9, 3, 55, 61]}, "paci_blue": {"w": 32, "h": 32, "frames": 1, "box": [6, 2, 26, 30]}, "paci_pink": {"w": 32, "h": 32, "frames": 1, "box": [6, 2, 26, 30]}, "claude": {"w": 32, "h": 32, "frames": 1, "box": [4, 3, 28, 28]}, "cafe": {"w": 32, "h": 32, "frames": 1, "box": [3, 1, 30, 30]}, "heart": {"w": 32, "h": 32, "frames": 1, "box": [4, 5, 28, 27]}, "marta": {"w": 96, "h": 96, "frames": 1, "box": [11, 12, 87, 92]}, "margarida": {"w": 96, "h": 96, "frames": 1, "box": [11, 4, 79, 94]}, "cristo": {"w": 104, "h": 192, "frames": 1, "box": [21, 9, 83, 185]}, "ponte": {"w": 906, "h": 128, "frames": 1, "box": [0, 8, 906, 120]}, "belem": {"w": 176, "h": 176, "frames": 1, "box": [8, 7, 167, 160]}, "bomjesus": {"w": 200, "h": 200, "frames": 1, "box": [0, 2, 200, 200]}, "giralda": {"w": 96, "h": 200, "frames": 1, "box": [3, 1, 93, 198]}, "club": {"w": 160, "h": 128, "frames": 1, "box": [52, 46, 108, 100]}, "loja": {"w": 176, "h": 128, "frames": 1, "box": [7, 13, 170, 119]}, "ferry": {"w": 128, "h": 64, "frames": 1, "box": [9, 4, 116, 57]}, "mundo": {"w": 5200, "h": 150, "frames": 1, "box": [0, 0, 5200, 150]}, "bg_hills": {"w": 400, "h": 100, "frames": 1, "box": [0, 38, 400, 100], "base": "rgb(21,93,101)"}};
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 ctx.imageSmoothingEnabled=false;
-let vertical=false,avisoRodar=false,forcarVertical=false,ovRodar=null;
+let rodado=false,avisoRodar=false,forcarRodado=false,ovRodar=null;
 const podeFS=MOBILE&&!!(document.fullscreenEnabled&&document.documentElement.requestFullscreen);   // Android sim; iPhone não
 function entrarFS(){
   try{
@@ -110,32 +110,27 @@ if(MOBILE){
     '#rodar #fsBtn{font-size:12px;padding:16px 14px;background:#ff9b3d;color:#fff;border-color:#fff6e0}#rodar #rodarBtn{background:transparent;color:#fff6e0;border-color:#fff6e0}';
   document.head.appendChild(st);
   ovRodar=document.createElement('div');ovRodar.id='rodar';
-  ovRodar.innerHTML='<div class="tel"></div><h1>Roda o telemóvel</h1><p>O jogo fica maior<br>na horizontal.</p>'+(podeFS?'<button type="button" id="fsBtn">Jogar em ecrã inteiro</button>':'')+'<button type="button" id="rodarBtn">O ecrã não roda?<br>Toca aqui para jogar na vertical</button>';
+  ovRodar.innerHTML='<div class="tel"></div><h1>Roda o telemóvel</h1><p>Este jogo joga-se<br>na horizontal.</p>'+(podeFS?'<button type="button" id="fsBtn">Jogar em ecrã inteiro</button>':'')+'<button type="button" id="rodarBtn">O ecrã não roda?<br>Toca aqui e deita o telemóvel</button>';
   document.body.appendChild(ovRodar);
   for(const ev of ['touchmove','gesturestart','dblclick','contextmenu'])document.addEventListener(ev,e=>e.preventDefault(),{passive:false});
   addEventListener('orientationchange',()=>setTimeout(fit,250));
 }
 function fit(){
   const vw=innerWidth,vh=innerHeight,pe=MOBILE&&vh>vw,d=window.devicePixelRatio||1;
-  vertical=pe&&forcarVertical;avisoRodar=pe&&!forcarVertical;
+  rodado=pe&&forcarRodado;avisoRodar=pe&&!forcarRodado;   // rodado: rotação bloqueada, o jogo desenha-se deitado e joga-se com o telemóvel de lado
   if(ovRodar){
     ovRodar.style.display=avisoRodar?'flex':'none';
-    const g=window.__G;                      // de pé e sem escolher a vertical: o jogo pára e fica em silêncio
+    const g=window.__G;                      // de pé: o jogo pára e fica em silêncio até o telemóvel ser rodado
     if(g&&g.state!=='load'){
       if(avisoRodar){if(g.state==='play')g.paused=true;SND.pause(true);}
       else if(!g.paused)SND.pause(false);
     }
   }
-  // escala inteira (píxeis nítidos) se não custar mais de 15% do tamanho
-  const esc=s=>{const sd=s*d,kd=Math.floor(sd);return (kd>=2&&(sd-kd)/sd<0.15)?kd/d:s;};
-  let k;
-  if(vertical){   // de pé: 270 de largura e a altura que o ecrã der (entre 400 e 600)
-    k=esc(vw/270);
-    const h=Math.max(400,Math.min(600,Math.floor(vh/k)));
-    if(h*k>vh)k=esc(vh/h);
-    setLayout(270,h);
-  }else{setLayout(480,270);k=esc(Math.min(vw/480,vh/270));}
+  const aw=rodado?vh:vw,ah=rodado?vw:vh;
+  const s=Math.min(aw/W,ah/H),sd=s*d,kd=Math.floor(sd);
+  const k=(kd>=2&&(sd-kd)/sd<0.15)?kd/d:s;   // escala inteira (píxeis nítidos) se não custar mais de 15% do tamanho
   cv.style.width=(W*k)+'px';cv.style.height=(H*k)+'px';
+  cv.style.transform=rodado?'rotate(90deg)':'none';
 }
 addEventListener('resize',fit);fit();
 
@@ -399,10 +394,10 @@ cv.addEventListener('contextmenu',e=>e.preventDefault());
   e.preventDefault();cv.focus();if(e.button!==0)return;
   if(avisoRodar){   // com o aviso no ecrã, os toques não contam para o jogo
     const id=e.target&&e.target.id;
-    if(id==='fsBtn')entrarFS();else if(id==='rodarBtn'){forcarVertical=true;fit();}
+    if(id==='fsBtn')entrarFS();else if(id==='rodarBtn'){forcarRodado=true;fit();}
     return;
   }
-  if(MOBILE&&podeFS&&!vertical&&!document.fullscreenElement&&G.state==='title'){   // botão de ecrã inteiro no título (telemóvel deitado)
+  if(MOBILE&&podeFS&&!rodado&&!document.fullscreenElement&&G.state==='title'){   // botão de ecrã inteiro no título (telemóvel deitado)
     const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
     if(x>=FSB[0]&&x<=FSB[0]+FSB[2]&&y>=FSB[1]-6&&y<=FSB[1]+FSB[3]+6){entrarFS();return;}
   }
@@ -538,9 +533,9 @@ function updatePlay(dt){
   // prémios
   for(const c of G.picks){
     c.t+=dt;c.x-=G.speed*VF*dt;
-    if(c.k==='cafe')c.y+=clamp((G.py+32-c.y)/6,-1,1)*95*dt;
+    if(c.k==='cafe'){const perto=c.x-G.px<170;c.y+=clamp((G.py+34-c.y)/(perto?3:6),-1,1)*(perto?300:95)*dt;}   // inevitável: ao chegar perto, acompanha a cegonha mais depressa do que ela foge (máx. dela: 205 px/s)
     const b=[c.x-9,c.y-11,c.x+9,c.y+11];
-    if(hitR(pc,b)||(c.k==='cafe'&&c.x<G.px+30)){
+    if(hitR(pc,b)){
       c.got=true;
       if(c.k==='claude'){G.shield=4.5;SND.star();burst(c.x,c.y,16,['#ff9b3d','#ffd166','#fff'],100,0,0.6);floats.push({s:'CLAUDE: SUPER PODERES!',x:Math.max(c.x,100),y:Math.max(c.y-34,HUD_H+12),life:1.5,c:'#ffb35c'});}
       else if(c.k==='cafe'){G.cafes++;G.combo=0;G.popup={t:0};SND.buzz();burst(c.x,c.y,10,['#6b3d1e','#fff','#c9a27a'],70,160,0.7);}
@@ -817,7 +812,8 @@ function drawTitle(){
   txt('FOGE DOS PROBLEMAS DO DIA A DIA',W/2,203,8,'#ff9c9c','center');
   if(Math.floor(G.gt*2)%2===0)txt(T.start,W/2,226,16,'#fff','center','#1b1f3a');
   if(MOBILE){
-    if(podeFS&&!document.fullscreenElement){ctx.fillStyle='#0b0f24';ctx.fillRect(FSB[0]-1,FSB[1]-1,FSB[2]+2,FSB[3]+2);ctx.fillStyle='#ffd166';ctx.fillRect(FSB[0],FSB[1],FSB[2],FSB[3]);txt('TOCA AQUI: ECRÃ INTEIRO',W/2,FSB[1]+4,8,'#1b1f3a','center');}
+    const fsm=podeFS&&!rodado&&!document.fullscreenElement;
+    if(rodado||fsm){ctx.fillStyle='#0b0f24';ctx.fillRect(FSB[0]-1,FSB[1]-1,FSB[2]+2,FSB[3]+2);ctx.fillStyle='#ffd166';ctx.fillRect(FSB[0],FSB[1],FSB[2],FSB[3]);txt(fsm?'TOCA AQUI: ECRÃ INTEIRO':'JOGA COM O TELEMÓVEL DEITADO',W/2,FSB[1]+4,8,'#1b1f3a','center');}
   }else{
     const fs=!!document.fullscreenElement;
     ctx.fillStyle='#0b0f24';ctx.fillRect(FSB[0]-1,FSB[1]-1,FSB[2]+2,FSB[3]+2);
