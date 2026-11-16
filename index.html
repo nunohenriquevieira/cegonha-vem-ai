@@ -242,11 +242,22 @@ const SND=(()=>{
   let ac=null,master=null,muted=false,timer=null,song=null,step=0,nextT=0,parado=false;
   const mf=m=>440*Math.pow(2,(m-69)/12);
   function init(){
-    if(ac){if(ac.state==='suspended'&&!parado)ac.resume().catch(()=>{});return;}
-    try{ac=new (window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.gain.value=0.55;master.connect(ac.destination);}catch(e){ac=null;}
+    if(!ac){
+      try{
+        const AC=window.AudioContext||window.webkitAudioContext;
+        try{ac=new AC({latencyHint:'interactive'});}catch(e){ac=new AC();}   // pedir o menor atraso que o aparelho der
+        master=ac.createGain();master.gain.value=0.55;master.connect(ac.destination);
+      }catch(e){ac=null;return;}
+    }
+    if(ac.state!=='running'&&!parado){
+      // nos telemóveis o som só arranca dentro de um toque "a sério" (ao levantar o dedo): acordar + nota muda, o desbloqueio clássico do iPhone
+      try{const r=ac.resume();if(r&&r.catch)r.catch(()=>{});}catch(e){}
+      try{const b=ac.createBufferSource();b.buffer=ac.createBuffer(1,1,ac.sampleRate);b.connect(ac.destination);b.start(0);}catch(e){}
+    }
   }
+  const pronto=()=>ac&&!muted&&ac.state==='running';   // sons pedidos com o áudio ainda a dormir não ficam em fila (sairiam todos juntos e atrasados)
   function tone(f,t0,dur,type,vol,slide){
-    if(!ac||muted)return;
+    if(!pronto())return;
     try{
       const o=ac.createOscillator(),g=ac.createGain();o.type=type||'square';
       o.frequency.setValueAtTime(f,t0);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t0+dur);
@@ -255,7 +266,7 @@ const SND=(()=>{
     }catch(e){}
   }
   function noise(t0,dur,vol){
-    if(!ac||muted)return;
+    if(!pronto())return;
     try{
       const n=Math.max(1,Math.floor(ac.sampleRate*dur)),b=ac.createBuffer(1,n,ac.sampleRate),d=b.getChannelData(0);
       for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
@@ -276,8 +287,9 @@ const SND=(()=>{
       lv:0.05,bv:0.06,type:'triangle'}
   };
   function tick(){
-    if(!ac||!song)return;
+    if(!ac||!song||ac.state!=='running')return;
     const s=SONGS[song],d=60/s.bpm/2;
+    if(nextT<ac.currentTime)nextT=ac.currentTime+0.05;   // nunca tocar notas "em atraso" de uma só vez
     while(nextT<ac.currentTime+0.25){
       const l=s.lead[step%s.lead.length];if(l)tone(mf(l),nextT,d*0.9,s.type,s.lv);
       if(step%2===0){const b=s.bass[(step/2)%s.bass.length];if(b)tone(mf(b),nextT,d*1.7,'triangle',s.bv);}
@@ -290,7 +302,7 @@ const SND=(()=>{
     if(name)timer=setInterval(tick,60);
   }
   return {
-    init,music,
+    init,music,estado(){return ac?ac.state+' '+(ac.baseLatency||0).toFixed(3)+' '+(ac.outputLatency||0).toFixed(3):'sem som';},
     toggle(){muted=!muted;return muted;},
     pause(p){parado=!!p;if(!ac)return;try{if(p)ac.suspend();else ac.resume();}catch(e){}},
     flap(){const t=now();noise(t,0.06,0.022);tone(300,t,0.07,'triangle',0.028,180);},
@@ -310,6 +322,9 @@ const SND=(()=>{
 
 /* ---------- estado ---------- */
 const G={state:'load',t:0,gt:0};
+/* O primeiro toque/tecla acorda o som o mais cedo possível (num telemóvel só conta o levantar do dedo). */
+for(const ev of ['touchend','pointerup','mouseup','click','keydown'])document.addEventListener(ev,()=>SND.init(),{capture:true,passive:true});
+window.__snd=()=>SND.estado();
 window.__G=G;window.__speed=1;window.__L=()=>({W,H,GROUND,HUD_H,V});
 const STARS=[],DECO=[];
 function ceu(){
