@@ -41,9 +41,10 @@ const NUVENS=[   // ideal para ler a voar: 1 ou 2 linhas, até ~13 letras por li
   ['SUBMETER','DESPESAS'],['DADOS','NO GERA'],
   ['É PARA','ONTEM'],['CLAUDE','SEM TOKENS'],
   ['SALAS TODAS','OCUPADAS'],['REUNIÃO QUE','DAVA UM E-MAIL'],
-  ['ODOO'],['MICRO-ONDAS','OCUPADOS'],
-  ['ESTÁ FRIO'],['ESTÁ CALOR']
+  ['ODOO'],['MICRO-ONDAS','OCUPADOS']
 ];
+/* Aparecem uma vez cada por viagem (as de cima) ou várias vezes, sempre alternadas: frio, calor, frio... (estas). */
+const TEMPO=[['ESTÁ FRIO'],['ESTÁ CALOR']];
 const NUVEM_PONTE=['TRÂNSITO','NA PONTE'];
 const CORVO='MBR';
 /* Distância (px) entre obstáculos: MAIOR = MENOS nuvens no ecrã. É igual do princípio ao fim da viagem. */
@@ -355,7 +356,7 @@ function resetPlay(){
     px:V?24:92,py:V?HUD_H+Math.round((GROUND-HUD_H)*0.36):110,vy:0,invuln:0,shield:0,
     obs:[],picks:[],obsT:2.6,pickT:1.0,starT:rnd(13,18),cafeT:rnd(15,19),forced:false,flapped:false,hud:0,lastY:V?HUD_H+Math.round((GROUND-HUD_H)*0.36):100,pc:0,
     blue:0,pink:0,hits:0,stress:0,noHit:0,shake:0,flash:0,phase:0,banner:null,
-    combo:0,arr:null,paused:false,clock:0,stage:0,deck:[],ponteN:0,popup:null,cafes:0});
+    combo:0,arr:null,paused:false,clock:0,stage:0,deck:baralhar(NUVENS),tempo:Math.random()<0.5?0:1,desde:0,ultLab:null,ponteN:0,popup:null,cafes:0});
   parts=[];floats=[];
 }
 function toTitle(){SND.pause(false);G.paused=false;G.popup=null;G.shield=0;G.banner=null;G.state='title';G.t=0;G.p=0;resetWorld();parts=[];floats=[];SND.music(null);}
@@ -429,11 +430,16 @@ function laneY(){
   do{y=rnd(HUD_H-6,GROUND-64-6);i++;}while(Math.abs(y-G.lastY)<48&&i<8);
   G.lastY=y;return y;
 }
+function baralhar(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+/* Cada frase sai no máximo uma vez por viagem; só repetem o trânsito na ponte, os MBR e o frio/calor (sempre alternados).
+   A mesma frase nunca sai duas vezes seguidas. */
 function nextLabel(){
+  let l;
   const ponte=G.gx>200&&G.gx<1000;
-  if(ponte&&G.ponteN<3&&Math.random()<0.75){G.ponteN++;return NUVEM_PONTE;}
-  if(!G.deck.length){G.deck=NUVENS.slice();for(let i=G.deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[G.deck[i],G.deck[j]]=[G.deck[j],G.deck[i]];}}
-  return G.deck.pop();
+  if(ponte&&G.ponteN<3&&G.ultLab!==NUVEM_PONTE&&Math.random()<0.75){G.ponteN++;l=NUVEM_PONTE;}
+  else if(!G.deck.length||G.desde>=3||(G.desde>=2&&Math.random()<0.5)){l=TEMPO[G.tempo];G.tempo=1-G.tempo;G.desde=0;}   // frio/calor entre cada 2 ou 3 frases, e só eles quando as outras acabam
+  else{l=G.deck.pop();G.desde++;}
+  G.ultLab=l;return l;
 }
 function addObs(k,y,extra){
   const o=Object.assign({k,x:W+8,y,by:y,t:rnd(0,6),vx:0,amp:0,fr:0},extra||{});
