@@ -40,10 +40,10 @@ const NUVENS=[
   ['FÉRIAS','POR MARCAR'],['AVALIAÇÃO DE','DESEMPENHO'],
   ['FORMAÇÃO','OBRIGATÓRIA'],['INSCRIÇÃO EM','CIMA DA HORA'],
   ['SPAM'],['PHISHING'],
-  ['NDA POR','ASSINAR'],['SUBMETER','DESPESAS'],
-  ['DADOS','NO GERA'],['GERA 3'],['DOTNETNUKE'],
+  ['SUBMETER','DESPESAS'],
+  ['DADOS','NO GERA'],['GERA 3'],
   ['É PARA','ONTEM'],['LOGO MAIOR'],
-  ['LOJA NOVA','SEM CHAVES'],['OBRA','ATRASADA'],
+  ['OBRA','ATRASADA'],
   ['CLAUDE','SEM TOKENS'],['SALA DE REUNIÕES','OCUPADA'],['REUNIÃO QUE','DAVA UM EMAIL']
 ];
 const NUVEM_PONTE=['TRÂNSITO','NA PONTE'];
@@ -440,15 +440,15 @@ function nextLabel(){
 }
 function addObs(k,y,extra){
   const o=Object.assign({k,x:W+8,y,by:y,t:rnd(0,6),vx:0,amp:0,fr:0},extra||{});
-  o.lab=k==='crow'?[CORVO]:nextLabel();o.tc=k==='crow'?'#fff6e0':pick(TAGC);
+  o.lab=o.semLab?null:k==='crow'?[CORVO]:nextLabel();o.tc=k==='crow'?'#fff6e0':pick(TAGC);
   G.obs.push(o);return o;
 }
 function spawnObstacle(){
   const ph=G.phase;
-  if(ph===2&&Math.random()<0.3){
+  if(ph===2&&Math.random()<0.2){
     const top=rnd(HUD_H-14,Math.max(HUD_H+10,GROUND-250));
     addObs(pick(['storm','rain']),top).tagOn=true;   // na dupla, a etiqueta de cima fica sobre a nuvem para não tapar a passagem
-    addObs(pick(['angry','rain']),top+64+rnd(84,96));
+    addObs(pick(['angry','rain']),top+64+rnd(84,96),{semLab:true});   // na dupla só uma nuvem leva mensagem
     G.lastY=top+70;return;
   }
   const pool=ph===0?['rain','rain','angry','storm']:ph===1?['rain','angry','storm','crow','crow']:['storm','storm','angry','crow','crow','rain'];
@@ -509,7 +509,8 @@ function updatePlay(dt){
   // spawns
   if(G.p<92){
     G.obsT-=dt*sk;
-    if(G.obsT<=0){spawnObstacle();G.obsT=[2.1,1.65,1.35][G.phase]*(1+0.5*G.stress)*(G.noHit>18?0.82:1)*rnd(0.85,1.15);}
+    if(G.obsT<=0&&G.obs.filter(o=>o.lab&&o.x>W*0.3).length>=2)G.obsT=0.35;   // nunca mais de 2 mensagens a entrar ao mesmo tempo: dá tempo para as ler
+    if(G.obsT<=0){spawnObstacle();G.obsT=[2.1,1.85,1.7][G.phase]*(1+0.5*G.stress)*(G.noHit>18?0.82:1)*rnd(0.85,1.15);}
     G.pickT-=dt*sk;if(G.pickT<=0){spawnPickups();G.pickT=rnd(2.0,3.0);}
     G.starT-=dt*sk;if(G.starT<=0&&G.p>8&&G.p<86){G.picks.push({k:'claude',x:W+24,y:freeY(rnd(HUD_H+30,GROUND-60),58),t:0});G.starT=rnd(19,25);}
     const temCafe=G.picks.some(c=>c.k==='cafe');
@@ -537,9 +538,9 @@ function updatePlay(dt){
   // prémios
   for(const c of G.picks){
     c.t+=dt;c.x-=G.speed*VF*dt;
-    if(c.force)c.y+=clamp(G.py+32-c.y,-1,1)*70*dt;
+    if(c.k==='cafe')c.y+=clamp((G.py+32-c.y)/6,-1,1)*95*dt;
     const b=[c.x-9,c.y-11,c.x+9,c.y+11];
-    if(hitR(pc,b)){
+    if(hitR(pc,b)||(c.k==='cafe'&&c.x<G.px+30)){
       c.got=true;
       if(c.k==='claude'){G.shield=4.5;SND.star();burst(c.x,c.y,16,['#ff9b3d','#ffd166','#fff'],100,0,0.6);floats.push({s:'CLAUDE: SUPER PODERES!',x:Math.max(c.x,100),y:Math.max(c.y-34,HUD_H+12),life:1.5,c:'#ffb35c'});}
       else if(c.k==='cafe'){G.cafes++;G.combo=0;G.popup={t:0};SND.buzz();burst(c.x,c.y,10,['#6b3d1e','#fff','#c9a27a'],70,160,0.7);}
