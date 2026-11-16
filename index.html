@@ -52,7 +52,7 @@ const CAFE={l1:'CAFÉ?',l2:'NO OPEN SPACE NÃO!',n1:'MARTA',n2:'MARGARIDA'};
 /* ======================================================== */
 let W=480,H=270,GROUND=247,HUD_H=30,V=false,VF=1;   // V = jogo na vertical (270 de largura); VF abranda o que vem ao encontro da cegonha
 const GF=0.42;
-const MOBILE=true;   // true na versão para telemóvel (toque em vez de teclado)
+const MOBILE=(matchMedia('(hover:none) and (pointer:coarse)').matches||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1));   // true na versão para telemóvel (toque em vez de teclado)
 const T=MOBILE?{
   t1:'TOCA NO ECRÃ = BATER AS ASAS',start:'TOCA PARA COMEÇAR',h1:'TOCA = BATER AS ASAS',h2:'TOCA VÁRIAS VEZES PARA VOAR MAIS ALTO',
   open:'TOCA: ABRIR A TROUXA!',cont:'TOCA PARA CONTINUAR',again:'TOCA PARA RECOMEÇAR',
@@ -325,7 +325,7 @@ const G={state:'load',t:0,gt:0};
 /* O primeiro toque/tecla acorda o som o mais cedo possível (num telemóvel só conta o levantar do dedo). */
 for(const ev of ['touchend','pointerup','mouseup','click','keydown'])document.addEventListener(ev,()=>SND.init(),{capture:true,passive:true});
 window.__snd=()=>SND.estado();
-window.__G=G;window.__speed=1;window.__L=()=>({W,H,GROUND,HUD_H,V});
+window.__G=G;window.__speed=1;window.__L=()=>({W,H,GROUND,HUD_H,V,M:MOBILE});
 const STARS=[],DECO=[];
 function ceu(){
   STARS.length=0;for(let i=0;i<46;i++)STARS.push({x:Math.floor(rnd(0,W)),y:Math.floor(rnd(HUD_H,GROUND-77)),p:rnd(0,6.28),b:Math.random()<0.2});
