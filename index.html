@@ -78,6 +78,7 @@ const LMS=[
   {k:'sign',x:4322,t:'LISBOA',front:true},{k:'loja',x:LG+W-196,front:true}
 ];
 const STAGES=[
+  {g:0,banner:'A ESTRADA ESTÁ A FECHAR!',t:3.6,big:true},   // piada do escritório: são horas de ir embora, e a cegonha parte
   {g:185,banner:'MARGEM SUL: ATÉ JÁ, CRISTO REI!'},
   {g:340,banner:'PONTE 25 DE ABRIL'},
   {g:760,banner:'TORRE DE BELÉM'},
@@ -532,7 +533,7 @@ function updatePlay(dt){
   const sk=G.speed/vn;               // os temporizadores acompanham a distância, não o relógio
   updateBg(dt,G.speed);
   G.phase=phaseOf(G.p);
-  while(G.stage<STAGES.length&&G.gx>=STAGES[G.stage].g){const s=STAGES[G.stage++];G.banner={s:s.banner,t:2.3};}
+  while(G.stage<STAGES.length&&G.gx>=STAGES[G.stage].g){const s=STAGES[G.stage++];G.banner={s:s.banner,t:s.t||2.3,d:s.t||2.3,big:s.big};}
   if(G.banner){G.banner.t-=dt;if(G.banner.t<=0)G.banner=null;}
   // jogador
   G.vy=Math.min(G.vy+460*dt,205);G.py+=G.vy*dt;
@@ -828,7 +829,8 @@ function drawPlay(){
   ctx.restore();
   if(G.flash>0){ctx.fillStyle='rgba(255,255,255,'+(G.flash*3).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
   drawHUD();
-  if(G.banner&&!G.popup){const a=clamp(Math.min(G.banner.t,2.3-G.banner.t)*4,0,1);const y=HUD_H+4;ctx.globalAlpha=a;ctx.fillStyle='rgba(47,168,158,0.85)';ctx.fillRect(0,y,W,20);ctx.fillStyle='#ffd45c';ctx.fillRect(0,y,W,2);ctx.fillRect(0,y+18,W,2);txt(G.banner.s,W/2,y+6,8,'#fff','center','#14524d');ctx.globalAlpha=1;}
+  if(G.banner&&!G.popup&&G.banner.big){const a=clamp(Math.min(G.banner.t,G.banner.d-G.banner.t)*4,0,1),y=HUD_H+3;ctx.globalAlpha=a;ctx.fillStyle='rgba(216,31,42,0.9)';ctx.fillRect(0,y,W,26);ctx.fillStyle='#ffd45c';ctx.fillRect(0,y,W,2);ctx.fillRect(0,y+24,W,2);txt(G.banner.s,W/2,y+6,16,'#fff','center','#7a0d14');ctx.globalAlpha=1;}
+  else if(G.banner&&!G.popup){const a=clamp(Math.min(G.banner.t,G.banner.d-G.banner.t)*4,0,1);const y=HUD_H+4;ctx.globalAlpha=a;ctx.fillStyle='rgba(47,168,158,0.85)';ctx.fillRect(0,y,W,20);ctx.fillStyle='#ffd45c';ctx.fillRect(0,y,W,2);ctx.fillRect(0,y+18,W,2);txt(G.banner.s,W/2,y+6,8,'#fff','center','#14524d');ctx.globalAlpha=1;}
   if(G.state==='play'&&!G.popup&&(!G.flapped||G.t<3.5)){ctx.globalAlpha=G.flapped?clamp(3.5-G.t,0,1):1;ctx.fillStyle='rgba(255,155,61,0.92)';
     if(V){const y=HUD_H+30;ctx.fillRect(10,y,W-20,88);ctx.fillStyle='#ffd45c';ctx.fillRect(10,y,W-20,2);ctx.fillRect(10,y+86,W-20,2);txt(T.h1V[0],W/2,y+9,16,'#fff','center','#8a3d00');txt(T.h1V[1],W/2,y+31,16,'#fff','center','#8a3d00');txt(T.h2V[0],W/2,y+57,8,'#fff6e0','center','#8a3d00');txt(T.h2V[1],W/2,y+70,8,'#fff6e0','center','#8a3d00');}
     else{ctx.fillRect(48,62,384,40);ctx.fillStyle='#ffd45c';ctx.fillRect(48,62,384,2);ctx.fillRect(48,100,384,2);txt(T.h1,W/2,68,16,'#fff','center','#8a3d00');txt(T.h2,W/2,90,8,'#fff6e0','center','#8a3d00');}
