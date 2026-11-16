@@ -50,6 +50,8 @@ const NUVEM_PONTE=['TRÂNSITO','NA PONTE'];
 const CORVO='MBR';
 /* Distância (px) entre obstáculos: MAIOR = MENOS nuvens no ecrã. É igual do princípio ao fim da viagem. */
 const ESPACO_NUVENS=380;
+/* Quantos segundos duram os super poderes do Claude (escudo + turbo). */
+const CLAUDE_DURA=8;
 const CAFE={l1:'CAFÉ?',l2:'NO OPEN SPACE NÃO!',n1:'MARTA',n2:'MARGARIDA'};
 /* ======================================================== */
 let W=480,H=270,GROUND=247,HUD_H=30,V=false,VF=1;   // V = jogo na vertical (270 de largura); VF abranda o que vem ao encontro da cegonha
@@ -539,7 +541,7 @@ function updatePlay(dt){
     const b=[c.x-9,c.y-11,c.x+9,c.y+11];
     if(hitR(pc,b)){
       c.got=true;
-      if(c.k==='claude'){G.shield=4.5;SND.star();burst(c.x,c.y,16,['#ff9b3d','#ffd166','#fff'],100,0,0.6);floats.push({s:'CLAUDE: SUPER PODERES!',x:Math.max(c.x,100),y:Math.max(c.y-34,HUD_H+12),life:1.5,c:'#ffb35c'});}
+      if(c.k==='claude'){G.shield=CLAUDE_DURA;SND.star();burst(c.x,c.y,16,['#ff9b3d','#ffd166','#fff'],100,0,0.6);floats.push({s:'CLAUDE: SUPER PODERES!',x:Math.max(c.x,100),y:Math.max(c.y-34,HUD_H+12),life:1.5,c:'#ffb35c'});}
       else if(c.k==='cafe'){G.cafes++;G.combo=0;G.popup={t:0};SND.buzz();burst(c.x,c.y,10,['#6b3d1e','#fff','#c9a27a'],70,160,0.7);}
       else{G.blue++;G.pink=G.blue;SND.pick(G.combo++);   /* de propósito: azul e rosa andam sempre iguais, para manter a incerteza */if(G.combo%10===0)floats.push({s:G.combo+' SEGUIDAS!',x:Math.max(c.x,70),y:Math.max(c.y-16,HUD_H+12),life:1.1,c:'#ffd166'});burst(c.x,c.y,6,c.k==='paci_blue'?['#9fd4ff','#fff']:['#ffb0d0','#fff'],60,0,0.4);}
     }
@@ -770,7 +772,7 @@ function drawPlay(){
     const cx=G.px+32,cy=G.py+36,r=31+Math.round(Math.sin(G.gt*8));
     pixCircle(cx,cy,r,'rgba(255,170,60,0.24)');
     for(let i=0;i<44;i++){const a=i/44*6.283+G.gt*2;ctx.fillStyle=i%2?'#ff9b3d':'#fff3b0';ctx.fillRect(Math.round(cx+Math.cos(a)*(r+2)),Math.round(cy+Math.sin(a)*(r+2)),2,2);}
-    ctx.fillStyle='#1b1f3a';ctx.fillRect(G.px+11,G.py+72,42,5);ctx.fillStyle='#ff9b3d';ctx.fillRect(G.px+12,G.py+73,Math.round(40*G.shield/4.5),3);
+    ctx.fillStyle='#1b1f3a';ctx.fillRect(G.px+11,G.py+72,42,5);ctx.fillStyle='#ff9b3d';ctx.fillRect(G.px+12,G.py+73,Math.round(40*G.shield/CLAUDE_DURA),3);
   }
   drawStork(G.px,G.py,G.invuln>0);
   drawParts();
