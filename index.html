@@ -519,7 +519,7 @@ function updatePlay(dt){
   if(G.paused)return;
   if(G.popup){G.popup.t+=dt;if(G.popup.t>2.5){G.popup=null;G.invuln=Math.max(G.invuln,1.0);}return;}
   G.t+=dt;G.clock=G.t;
-  const sh=G.shield>0,vn=100+G.p*0.47;
+  const sh=G.shield>0,vn=112+G.p*0.21;
   // velocidade estável: cresce devagar ao longo da viagem e só muda no turbo do Claude
   const alvo=sh?1.25:1;
   G.mult+=(alvo-G.mult)*Math.min(1,dt*3);
@@ -566,7 +566,7 @@ function updatePlay(dt){
       else if(G.invuln<=0){
         o.spent=true;G.invuln=1.5;const lost=Math.min(2,G.blue);G.blue-=lost;G.pink=G.blue;G.hud=lost?0.6:0;for(let i=0;i<lost*2;i++)parts.push({x:G.px+32,y:G.py+30,vx:rnd(-80,80),vy:rnd(-130,-50),g:260,life:1.2,max:1.2,c:i<lost?'#9fd4ff':'#ffb0d0',s:6});G.vy=-110;G.shake=0.35;G.flash=0.12;G.hits++;G.stress=Math.min(3,G.stress+1);G.noHit=0;G.combo=0;
         SND.hit();burst(G.px+32,G.py+32,12,['#fff','#e9eef7','#c8d0e0'],80,160,0.9);
-        floats.push({s:lost?'UI! -'+(lost*2)+' CHUPETAS':'UI!',x:Math.max(G.px+34,80),y:Math.max(G.py+6,HUD_H+12),life:1.2,c:'#fff',sh:'#c0182d'});
+        floats.push({s:lost?'UI! -'+(lost*2)+' CHUPETAS':'UI!',rel:1,y:-2,bx:66,life:1.2,c:'#fff',sh:'#c0182d'});
       }
     }
   }
@@ -578,9 +578,9 @@ function updatePlay(dt){
     const b=[c.x-9,c.y-11,c.x+9,c.y+11];
     if(hitR(pc,b)){
       c.got=true;
-      if(c.k==='claude'){G.shield=CLAUDE_DURA;SND.star();burst(c.x,c.y,16,['#ff9b3d','#ffd166','#fff'],100,0,0.6);floats.push({s:'CLAUDE: SUPER PODERES!',x:Math.max(c.x,100),y:Math.max(c.y-34,HUD_H+12),life:1.5,c:'#ffb35c'});}
+      if(c.k==='claude'){G.shield=CLAUDE_DURA;SND.star();burst(c.x,c.y,16,['#ff9b3d','#ffd166','#fff'],100,0,0.6);floats.push({s:'CLAUDE: SUPER PODERES!',rel:1,y:-14,bx:86,life:1.5,c:'#ffb35c'});}
       else if(c.k==='cafe'){G.cafes++;G.combo=0;G.popup={t:0};SND.buzz();burst(c.x,c.y,10,['#6b3d1e','#fff','#c9a27a'],70,160,0.7);}
-      else{G.blue++;G.pink=G.blue;SND.pick(G.combo++);   /* de propósito: azul e rosa andam sempre iguais, para manter a incerteza */if(G.combo%10===0)floats.push({s:G.combo+' SEGUIDAS!',x:Math.max(c.x,70),y:Math.max(c.y-16,HUD_H+12),life:1.1,c:'#ffd166'});burst(c.x,c.y,6,c.k==='paci_blue'?['#9fd4ff','#fff']:['#ffb0d0','#fff'],60,0,0.4);}
+      else{G.blue++;G.pink=G.blue;SND.pick(G.combo++);   /* de propósito: azul e rosa andam sempre iguais, para manter a incerteza */if(G.combo%10===0)floats.push({s:G.combo+' SEGUIDAS!',rel:1,y:-2,bx:66,life:1.1,c:'#ffd166'});burst(c.x,c.y,6,c.k==='paci_blue'?['#9fd4ff','#fff']:['#ffb0d0','#fff'],60,0,0.4);}
     }
   }
   G.picks=G.picks.filter(c=>!c.got&&c.x>-20);
@@ -738,7 +738,15 @@ function drawWorld(p){
 function drawParts(){
   for(const p of parts){ctx.globalAlpha=clamp(p.life/p.max*1.4,0,1);ctx.fillStyle=p.c;ctx.fillRect(Math.round(p.x),Math.round(p.y),p.s,p.s);}
   ctx.globalAlpha=1;
-  for(const f of floats){ctx.globalAlpha=clamp(f.life*2,0,1);const hw=f.s.length*4+2;txt(f.s,hw*2>W?W/2:clamp(f.x,hw,W-hw),f.y,8,f.c,'center',f.sh||'#1b1f3a');}
+  for(const f of floats){
+    ctx.globalAlpha=clamp(f.life*2,0,1);const hw=f.s.length*4+2;
+    let fx=f.x,fy=f.y;
+    if(f.rel){   // avisos da cegonha: acompanham-na, por cima da cabeça; se ela estiver colada ao topo, passam para baixo dela
+      fx=G.px+32;fy=G.py+f.y;
+      if(fy<HUD_H+(G.banner?28:4))fy=G.py+f.bx;
+    }
+    txt(f.s,hw*2>W?W/2:clamp(fx,hw,W-hw),fy,8,f.c,'center',f.sh||'#1b1f3a');
+  }
   ctx.globalAlpha=1;
 }
 function drawStork(x,y,blink){
@@ -880,7 +888,7 @@ function drawSuspense(){
     }else{
       spr('paci_blue',58,104,0,2);txt('x'+G.blue,90,172,16,'#1f6fc0','center','#fff');
       spr('paci_pink',W-122,104,0,2);txt('x'+G.pink,W-90,172,16,'#d02a78','center','#fff');
-      if(G.t>1.0&&Math.floor(G.gt*2)%2===0)txt(T.open,W/2,218,16,'#e0520a','center','#fff');
+      if(G.t>1.0&&(G.gt*1.2)%1<0.8)txt(T.open,W/2,218,16,'#e0520a','center','#fff');
     }
     const a=clamp(1-G.t/0.6,0,1);if(a>0){ctx.fillStyle='rgba(11,15,30,'+a+')';ctx.fillRect(0,0,W,H);}
   }else{
