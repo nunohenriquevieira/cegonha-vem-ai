@@ -448,23 +448,43 @@ function spawnObstacle(){
     const top=rnd(HUD_H-14,Math.max(HUD_H+10,GROUND-250));
     addObs(pick(['storm','rain']),top).tagOn=true;   // na dupla, a etiqueta de cima fica sobre a nuvem para não tapar a passagem
     addObs(pick(['angry','rain']),top+64+rnd(84,96),{semLab:true});   // na dupla só uma nuvem leva mensagem
-    G.lastY=top+70;return;
+    G.lastY=top+70;return true;
   }
   const pool=ph===0?['rain','rain','angry','storm']:ph===1?['rain','angry','storm','crow','crow']:['storm','storm','angry','crow','crow','rain'];
-  const k=pick(pool);
-  if(k==='crow')addObs(k,laneY(),{vx:rnd(45,80),amp:8,fr:3});
-  else if(k==='angry')addObs(k,clamp(laneY(),HUD_H+16,GROUND-64-26),{amp:24,fr:1.7});
-  else addObs(k,laneY(),{amp:2,fr:2});
+  const k=pick(pool),amp=k==='crow'?8:k==='angry'?24:2;
+  let y,i=0;
+  do{y=k==='angry'?clamp(laneY(),HUD_H+16,GROUND-64-26):laneY();i++;}while(!semChupetas(k,y,amp)&&i<10);
+  if(!semChupetas(k,y,amp))return false;   // não há sítio sem tapar chupetas: tenta outra vez daqui a nada
+  if(k==='crow')addObs(k,y,{vx:rnd(45,80),amp:8,fr:3});
+  else if(k==='angry')addObs(k,y,{amp:24,fr:1.7});
+  else addObs(k,y,{amp:2,fr:2});
+  return true;
+}
+/* Nuvens e chupetas andam à mesma velocidade: se nascerem sobrepostas, ficam sobrepostas até ao fim. Por isso nunca nascem no mesmo sítio. */
+function semChupetas(k,y,amp){   // a nuvem (com a etiqueta por baixo) não pode nascer em cima de chupetas que estão a entrar
+  const b=META[k].box,t=y+b[1]-amp-14,f=y+b[3]+28+amp+14;
+  return !G.picks.some(c=>c.x>W-45&&c.x<W+125&&c.y>t&&c.y<f);
+}
+function yLivre(y,r){            // [y-r, y+r] não toca em nenhuma nuvem (nem na etiqueta) que ainda está a entrar
+  for(const o of G.obs){
+    if(o.x<(o.vx?W-60:W-100))continue;
+    const b=META[o.k].box,h=o.lab?o.lab.length*11+6:0;
+    if(y+r>o.by+b[1]-o.amp-2&&y-r<o.by+b[3]+h+o.amp+2)return false;
+  }
+  return true;
 }
 function freeY(y0,m){
   m=m||40;for(const o of G.obs){if(o.x>W-140){const cy=o.y+32;if(Math.abs(cy-y0)<m)y0=cy<(HUD_H+GROUND)/2+2?cy+m+22:cy-m-22;}}
   return clamp(y0,HUD_H+22,GROUND-40);
 }
 function spawnPickups(){
-  const n=3+Math.floor(Math.random()*3),y0=freeY(rnd(HUD_H+22,GROUND-40)),amp=rnd(-20,20);
+  const n=3+Math.floor(Math.random()*3),amp=rnd(-20,20);let y0,i=0;
+  do{y0=rnd(HUD_H+22,GROUND-40);i++;}while(!yLivre(y0,34)&&i<14);
+  if(!yLivre(y0,34))return false;
   for(let i=0;i<n;i++){
     G.picks.push({k:(G.pc++%2)?'paci_pink':'paci_blue',x:W+24+i*26,y:clamp(y0+Math.sin(i/(n-1)*Math.PI)*amp,HUD_H+16,GROUND-30),t:i*0.5});
   }
+  return true;
 }
 function burst(x,y,n,colors,sp,grav,life){
   for(let i=0;i<n;i++){const a=rnd(0,6.28),v=rnd(sp*0.3,sp);parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,g:grav||0,life:life||0.6,max:life||0.6,c:pick(colors),s:Math.random()<0.4?3:2});}
@@ -509,9 +529,9 @@ function updatePlay(dt){
   if(G.p<92){
     G.obsT-=dt*sk;
     if(G.obsT<=0&&G.obs.filter(o=>o.lab&&o.x>-40).length>=2)G.obsT=0.3;   // nunca mais de 2 mensagens no ecrã: dá tempo para as ler
-    if(G.obsT<=0){spawnObstacle();G.obsT=ESPACO_NUVENS/vn*rnd(0.85,1.15);}   // mesmo espaçamento no ecrã do princípio ao fim
-    G.pickT-=dt*sk;if(G.pickT<=0){spawnPickups();G.pickT=rnd(2.0,3.0);}
-    G.starT-=dt*sk;if(G.starT<=0&&G.p>8&&G.p<86){G.picks.push({k:'claude',x:W+24,y:freeY(rnd(HUD_H+30,GROUND-60),58),t:0});G.starT=rnd(19,25);}
+    if(G.obsT<=0)G.obsT=spawnObstacle()?ESPACO_NUVENS/vn*rnd(0.85,1.15):0.25;   // mesmo espaçamento no ecrã do princípio ao fim
+    G.pickT-=dt*sk;if(G.pickT<=0)G.pickT=spawnPickups()?rnd(2.0,3.0):0.3;
+    G.starT-=dt*sk;if(G.starT<=0&&G.p>8&&G.p<86){let sy=0,i=0;do{sy=rnd(HUD_H+30,GROUND-60);i++;}while(!yLivre(sy,26)&&i<14);if(yLivre(sy,26)){G.picks.push({k:'claude',x:W+24,y:sy,t:0});G.starT=rnd(19,25);}else G.starT=0.3;}
     const temCafe=G.picks.some(c=>c.k==='cafe');
     G.cafeT-=dt*sk;if(G.cafeT<=0&&G.cafes<2&&!temCafe&&G.p>5&&G.p<88){G.picks.push({k:'cafe',x:W+24,y:freeY(rnd(HUD_H+40,GROUND-50),58),t:0});G.cafeT=rnd(24,30);}
     // a piada do café tem de aparecer pelo menos uma vez: a meio da viagem vem uma chávena ter com a cegonha
@@ -757,17 +777,17 @@ function drawPlay(){
   ctx.save();
   if(G.shake>0)ctx.translate(Math.round(rnd(-3,3)),Math.round(rnd(-3,3)));
   drawWorld(G.p);
-  for(const c of G.picks){
-    const bob=Math.sin(c.t*4+c.x*0.05)*2;spr(c.k,c.x-16,c.y-16+bob);
-    if(c.k==='claude')txt('CLAUDE',c.x,c.y+15+bob,8,'#fff','center','#1b1f3a');
-    else if(c.k==='cafe'){ctx.fillStyle='#1b2a5c';ctx.fillRect(Math.round(c.x-20),Math.round(c.y+13+bob),40,15);ctx.fillStyle='#fff6e0';ctx.fillRect(Math.round(c.x-19),Math.round(c.y+14+bob),38,13);txt('CAFÉ',c.x,c.y+19+bob,8,'#1b2a5c','center');}
-  }
   for(const o of G.obs){
     const m=META[o.k],f=m.frames>1?Math.floor(o.t*12)%m.frames:0;
     if(G.dark>0.09&&!o.spent){ctx.globalAlpha=Math.min(0.7,G.dark*3);const x=Math.round(o.x),y=Math.round(o.y);for(const d of [[-1,0],[1,0],[0,-1],[0,1]])ctx.drawImage(SIL[o.k],f*m.w,0,m.w,m.h,x+d[0],y+d[1],m.w,m.h);ctx.globalAlpha=1;}
     spr(o.k,o.x,o.y,f,1,o.spent?0.45:1);
   }
   for(const o of G.obs)drawTag(o);
+  for(const c of G.picks){
+    const bob=Math.sin(c.t*4+c.x*0.05)*2;spr(c.k,c.x-16,c.y-16+bob);
+    if(c.k==='claude')txt('CLAUDE',c.x,c.y+15+bob,8,'#fff','center','#1b1f3a');
+    else if(c.k==='cafe'){ctx.fillStyle='#1b2a5c';ctx.fillRect(Math.round(c.x-20),Math.round(c.y+13+bob),40,15);ctx.fillStyle='#fff6e0';ctx.fillRect(Math.round(c.x-19),Math.round(c.y+14+bob),38,13);txt('CAFÉ',c.x,c.y+19+bob,8,'#1b2a5c','center');}
+  }
   if(G.shield>0&&(G.shield>1||Math.floor(G.gt*10)%2)){
     const cx=G.px+32,cy=G.py+36,r=31+Math.round(Math.sin(G.gt*8));
     pixCircle(cx,cy,r,'rgba(255,170,60,0.24)');
