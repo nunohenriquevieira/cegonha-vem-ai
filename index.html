@@ -451,14 +451,27 @@ function spawnObstacle(){
     G.lastY=top+70;return true;
   }
   const pool=ph===0?['rain','rain','angry','storm']:ph===1?['rain','angry','storm','crow','crow']:['storm','storm','angry','crow','crow','rain'];
-  const k=pick(pool),amp=k==='crow'?8:k==='angry'?24:2;
+  let k=pick(pool);
+  if(k==='crow'&&G.picks.some(c=>c.k==='claude'||c.k==='cafe'))k=pick(['rain','storm']);   // os corvos voam mais depressa: com um café ou um Claude no ecrã iam apanhá-lo
+  const amp=k==='crow'?8:k==='angry'?24:2;
   let y,i=0;
   do{y=k==='angry'?clamp(laneY(),HUD_H+16,GROUND-64-26):laneY();i++;}while(!semChupetas(k,y,amp)&&i<10);
   if(!semChupetas(k,y,amp))return false;   // não há sítio sem tapar chupetas: tenta outra vez daqui a nada
   if(k==='crow')addObs(k,y,{vx:rnd(45,80),amp:8,fr:3});
-  else if(k==='angry')addObs(k,y,{amp:24,fr:1.7});
-  else addObs(k,y,{amp:2,fr:2});
+  else if(k==='angry')chupetasJunto(addObs(k,y,{amp:24,fr:1.7}));
+  else chupetasJunto(addObs(k,y,{amp:2,fr:2}));
   return true;
+}
+/* Uma fila de chupetas mesmo por cima ou por baixo da nuvem: para as apanhar é preciso passar rente ao obstáculo. */
+function chupetasJunto(o){
+  if(Math.random()<0.2)return;
+  const b=META[o.k].box,h=o.lab?o.lab.length*11+6:0,n=3+Math.floor(Math.random()*2);
+  const cima=o.by+b[1]-o.amp-20,baixo=o.by+b[3]+h+o.amp+22;
+  const livre=y=>!G.picks.some(c=>c.x>W-45&&Math.abs(c.y-y)<28);
+  const ops=[];if(cima>=HUD_H+16&&livre(cima))ops.push(cima);if(baixo<=GROUND-30&&livre(baixo))ops.push(baixo);
+  if(!ops.length)return;
+  const y=pick(ops);
+  for(let i=0;i<n;i++)G.picks.push({k:(G.pc++%2)?'paci_pink':'paci_blue',x:o.x+32-(n-1)*13+i*26,y,t:i*0.5});
 }
 /* Nuvens e chupetas andam à mesma velocidade: se nascerem sobrepostas, ficam sobrepostas até ao fim. Por isso nunca nascem no mesmo sítio. */
 function semChupetas(k,y,amp){   // a nuvem (com a etiqueta por baixo) não pode nascer em cima de chupetas que estão a entrar
@@ -471,6 +484,7 @@ function yLivre(y,r){            // [y-r, y+r] não toca em nenhuma nuvem (nem n
     const b=META[o.k].box,h=o.lab?o.lab.length*11+6:0;
     if(y+r>o.by+b[1]-o.amp-2&&y-r<o.by+b[3]+h+o.amp+2)return false;
   }
+  if(G.picks.some(c=>c.x>W-10&&Math.abs(c.y-y)<r+14))return false;   // nem nas chupetas que vêm coladas a uma nuvem
   return true;
 }
 function freeY(y0,m){
@@ -529,13 +543,16 @@ function updatePlay(dt){
   if(G.p<92){
     G.obsT-=dt*sk;
     if(G.obsT<=0&&G.obs.filter(o=>o.lab&&o.x>-40).length>=2)G.obsT=0.3;   // nunca mais de 2 mensagens no ecrã: dá tempo para as ler
-    if(G.obsT<=0)G.obsT=spawnObstacle()?ESPACO_NUVENS/vn*rnd(0.85,1.15):0.25;   // mesmo espaçamento no ecrã do princípio ao fim
-    G.pickT-=dt*sk;if(G.pickT<=0)G.pickT=spawnPickups()?rnd(2.0,3.0):0.3;
-    G.starT-=dt*sk;if(G.starT<=0&&G.p>8&&G.p<86){let sy=0,i=0;do{sy=rnd(HUD_H+30,GROUND-60);i++;}while(!yLivre(sy,26)&&i<14);if(yLivre(sy,26)){G.picks.push({k:'claude',x:W+24,y:sy,t:0});G.starT=rnd(19,25);}else G.starT=0.3;}
+    // cafés, Claudes e nuvens entram sempre separados: nunca dois lado a lado nem um por cima do outro
+    const esp=d=>G.picks.some(c=>(c.k==='claude'||c.k==='cafe')&&c.x>W-d);
+    if(G.obsT<=0)G.obsT=(!esp(140)&&spawnObstacle())?ESPACO_NUVENS/vn*rnd(0.85,1.15):0.25;
+    G.pickT-=dt*sk;if(G.pickT<=0)G.pickT=(!esp(70)&&spawnPickups())?rnd(3.6,4.6):0.3;
+    let vago=!esp(190)&&!G.obs.some(o=>o.x>W-190)&&!G.picks.some(c=>c.x>W-40);   // há espaço livre à entrada do ecrã?
+    G.starT-=dt*sk;if(G.starT<=0&&G.p>8&&G.p<86){if(vago){G.picks.push({k:'claude',x:W+24,y:rnd(HUD_H+30,GROUND-60),t:0});G.starT=rnd(19,25);vago=false;}else G.starT=0.2;}
     const temCafe=G.picks.some(c=>c.k==='cafe');
-    G.cafeT-=dt*sk;if(G.cafeT<=0&&G.cafes<2&&!temCafe&&G.p>5&&G.p<88){G.picks.push({k:'cafe',x:W+24,y:freeY(rnd(HUD_H+40,GROUND-50),58),t:0});G.cafeT=rnd(24,30);}
+    G.cafeT-=dt*sk;if(G.cafeT<=0&&G.cafes<2&&!temCafe&&G.p>5&&G.p<88){if(vago){G.picks.push({k:'cafe',x:W+24,y:rnd(HUD_H+40,GROUND-50),t:0});G.cafeT=rnd(24,30);vago=false;}else G.cafeT=0.2;}
     // a piada do café tem de aparecer pelo menos uma vez: a meio da viagem vem uma chávena ter com a cegonha
-    if(G.cafes===0&&!G.forced&&!temCafe&&G.p>48){G.forced=true;G.picks.push({k:'cafe',x:W+24,y:clamp(G.py+32,HUD_H+30,GROUND-30),t:0,force:true});}
+    if(G.cafes===0&&!G.forced&&!temCafe&&vago&&G.p>48){G.forced=true;G.picks.push({k:'cafe',x:W+24,y:clamp(G.py+32,HUD_H+30,GROUND-30),t:0,force:true});}
   }
   const pb=[G.px+PBOX[0],G.py+PBOX[1],G.px+PBOX[2],G.py+PBOX[3]];
   const pc=[G.px+PCOL[0],G.py+PCOL[1],G.px+PCOL[2],G.py+PCOL[3]];
