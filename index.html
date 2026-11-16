@@ -114,7 +114,7 @@ if(MOBILE){
     '#rodar #fsBtn{font-size:12px;padding:16px 14px;background:#ff9b3d;color:#fff;border-color:#fff6e0}#rodar #rodarBtn{background:transparent;color:#fff6e0;border-color:#fff6e0}';
   document.head.appendChild(st);
   ovRodar=document.createElement('div');ovRodar.id='rodar';
-  ovRodar.innerHTML='<div class="tel"></div><h1>Roda o telemóvel</h1><p>Este jogo joga-se<br>na horizontal.</p>'+(podeFS?'<button type="button" id="fsBtn">Jogar em ecrã inteiro</button>':'')+'<button type="button" id="rodarBtn">O ecrã não roda?<br>Toca aqui e deita o telemóvel</button>';
+  ovRodar.innerHTML='<div class="tel"></div><h1>Roda o telemóvel</h1><p>Este jogo joga-se<br>na horizontal.</p>'+(podeFS?'<button type="button" id="fsBtn">Jogar em ecrã inteiro</button>':'');
   document.body.appendChild(ovRodar);
   for(const ev of ['touchmove','gesturestart','dblclick','contextmenu'])document.addEventListener(ev,e=>e.preventDefault(),{passive:false});
   addEventListener('orientationchange',()=>setTimeout(fit,250));
